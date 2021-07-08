@@ -2,5 +2,5 @@
 
 #### The workflow of neural-FEBI
 
-![workflow](https://github.com/ouerum/neural-FEBI/figures/workflow.png)
+![workflow](https://github.com/ouerum/neural-FEBI/blob/main/figures/workflow.png)
 
