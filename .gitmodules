@@ -1,0 +1,6 @@
+[submodule "scripts/instrumentedSolc/solc-0.5.17"]
+	path = scripts/instrumentedSolc/solc-0.5.17
+	url = https://github.com/CloudDataLab/instrumented-solc-0.5.17.git
+[submodule "scripts/instrumentedSolc/solc-0.4.25"]
+	path = scripts/instrumentedSolc/solc-0.4.25
+	url = https://github.com/CloudDataLab/instrumented-solc-0.4.25.git
