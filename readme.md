@@ -5,7 +5,7 @@ Note: you need to clone this repo using the --recursive flag since this repo has
 
 ## 1. The workflow of neural-FEBI
 
-![workflow](https://github.com/ouerum/neural-FEBI/blob/main/figures/workflow.png)
+![workflow](https://github.com/ouerum/neural-FEBI/blob/master/figures/workflow.png)
 
 
 ## 2. Prerequisites
