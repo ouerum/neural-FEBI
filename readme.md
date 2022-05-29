@@ -35,7 +35,7 @@ Note: you need to clone this repo using the --recursive flag since this repo has
 
 
 ## 3. Dataset
-
+If you do not want compile the Solidity and extract the ground truth agian, you can directly use the follow dataset.
 URL: https://drive.google.com/drive/folders/1LsVEmKFALN9t2trWivPgEZI41lzeqEdu?usp=sharing
 
 The dataset contains two parts :
