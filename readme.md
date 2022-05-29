@@ -1,6 +1,6 @@
 Note: you need to clone this repo using the --recursive flag since this repo has submodules, e.g., git clone git@github.com:ouerum/neural-FEBI.git --recursive
 
-please feel free to contact me for any questions by email. (ouEru@outlook.com or jiahaohe@webank.com)
+please feel free to contact me for any questions by email. (ouEru@outlook.com)
 
 # Neural-FEBI: Accurate Function Identification in Ethereum Virtual Machine Bytecode
 
