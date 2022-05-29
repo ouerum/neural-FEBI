@@ -9,7 +9,7 @@ Note: you need to clone this repo using the --recursive flag since this repo has
 
 
 ## 2. Prerequisites
-* [Build Solidity compiler from the source]https://docs.soliditylang.org/en/v0.8.14/installing-solidity.html#building-from-source
+* Build Solidity compiler from the source(https://docs.soliditylang.org/)
 * Python 3.8
 
 ## 3. Running neural-FEBI
