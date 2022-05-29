@@ -8,6 +8,8 @@ class Crawl_Gigahorse(scrapy.spiders.Spider):
 
     output_dir = "/home/dapp/ssd-ext/etherscan/"
 
+    address_dir = "/home/dapp/ssd/nas/contract_src_addrs/addresses"
+
     url = "https://api-cn.etherscan.com/api?module=contract&action=getsourcecode&apikey=M6VMBHP2TIIQKT9TH4471HWS92H5HW73HR&address="
 
     headers = {
@@ -15,7 +17,7 @@ class Crawl_Gigahorse(scrapy.spiders.Spider):
     }
 
     def start_requests(self):
-        with open("/home/dapp/ssd/nas/contract_src_addrs/addresses", 'r') as f:
+        with open(self.address_dir, 'r') as f:
             addresses = f.read().split('\n')
             for address in addresses:
                 if address.startswith('0x') and not os.path.exists(self.output_dir+"/"+address+"/code.sol"):

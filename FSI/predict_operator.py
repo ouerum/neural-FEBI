@@ -129,13 +129,6 @@ def test():
     end = time.time()
     print(str(end-start) + "sec")
 
-    results_path = os.path.join(config.fsi_result_csv_path, config.dtype + ".csv")
-    with open(results_path, 'w+') as f:
-        writer = csv.writer(f)
-        writer.writerow(["addr", "f1", "p", "r", "priv_starts"])
-        for addr, data in result[3].items():
-            writer.writerow([addr] + data)
-
 
 if __name__ == "__main__":
     test()

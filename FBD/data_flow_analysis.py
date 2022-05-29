@@ -10,6 +10,18 @@ from fbdconfig import visited_max_times as max_times, debug, init_stack_heigth
 
 def context(op_stacks, push_index_to_use_indices):
     result = ""
+    #     none_accumulator = 0
+    #     for i in range(0, min(len(op_stacks), 50)):
+    #         if op_stacks[i] != None:
+    #             if none_accumulator == 0:
+    #                 result += (" " + str(op_stacks[i][0]))
+    #             else:
+    #                 result += ("*" + str(none_accumulator) + " " + str(op_stacks[i][0]))
+    #                 none_accumulator = 0
+    #         else:
+    #             none_accumulator += 1
+    #     if none_accumulator != 0:
+    #         result += ("*" + str(none_accumulator))
 
     added = set()
     for i in range(0, len(op_stacks)):
@@ -26,8 +38,21 @@ def context(op_stacks, push_index_to_use_indices):
     return result
 
 
+def add_call_graph(call_graph, call_site_index, tgt_func, tag_ctx):
+    if call_site_index not in call_graph:
+        call_graph[call_site_index] = [(tgt_func, tag_ctx)]
+    else:
+        index = 0
+        while index < len(call_graph[call_site_index]):
+            if call_graph[call_site_index][index][1] == tag_ctx and tgt_func == call_graph[call_site_index][index][0]:
+                break
+            index += 1
+        if index == len(call_graph[call_site_index]):
+            call_graph[call_site_index].append((tgt_func, tag_ctx))
+
+
 def _global_data_flow_analysis(disassembly, start, pc_to_instruction_index, op_stacks, visited, visited_times,
-                               push_index_to_use_indices, depth, fb, ctx, func_starts, possible_calls, invalid_call,
+                               push_index_to_use_indices, depth, fb, call_graph, ctx, func_starts, possible_calls, invalid_call,
                                curent_threshold, threshold, identified_funcs, existing_non_func=False):
     _invalid_call = {}
     missing_flag = False
@@ -134,6 +159,9 @@ def _global_data_flow_analysis(disassembly, start, pc_to_instruction_index, op_s
                 if pc not in possible_calls:
                     possible_calls[pc] = set()
                 possible_calls[pc].add(i)
+                if ctx[0][0] == -1:
+                    tag_ctx = context(op_stacks, push_index_to_use_indices)
+                    add_call_graph(call_graph, i, pc, tag_ctx)
                 ctx.insert(0, (i, pc))
 
             i = pc_to_instruction_index[pc]
@@ -164,9 +192,9 @@ def _global_data_flow_analysis(disassembly, start, pc_to_instruction_index, op_s
                         _missing_flag, _invalid_flag, new_invalid_calls = \
                             _global_data_flow_analysis(disassembly, pc_to_instruction_index[pc],
                                                        pc_to_instruction_index, list(op_stacks), visited, visited_times,
-                                                       push_index_to_use_indices, depth + 1, fb, list(ctx), func_starts,
-                                                       possible_calls, invalid_call, curent_threshold, threshold,
-                                                       identified_funcs, existing_non_func)
+                                                       push_index_to_use_indices, depth + 1, fb, call_graph, list(ctx),
+                                                       func_starts, possible_calls, invalid_call, curent_threshold,
+                                                       threshold, identified_funcs, existing_non_func)
                         missing_flag = _missing_flag or missing_flag
                         invalid_flag = _invalid_flag or invalid_flag
                         _invalid_call.update(new_invalid_calls)
@@ -211,6 +239,9 @@ def _global_data_flow_analysis(disassembly, start, pc_to_instruction_index, op_s
             if pc not in possible_calls:
                 possible_calls[pc] = set()
             possible_calls[pc].add(i)
+            if ctx[0][0] == -1:
+                tag_ctx = context(op_stacks, push_index_to_use_indices)
+                add_call_graph(call_graph, i, pc, tag_ctx)
             ctx.insert(0, (i, pc))
 
         i = i + 1
@@ -222,7 +253,7 @@ def _global_data_flow_analysis(disassembly, start, pc_to_instruction_index, op_s
 # fbs is a map start_index -> set(tag_index)
 # start is the star of a function wait for exploration
 def global_data_flow_analysis(disassembly, pc_to_instruction_index, start, func_starts, possible_calls, invalid_call, fb,
-                              current_threshold, threshold, identified_funcs):
+                              call_graph, current_threshold, threshold, identified_funcs):
 
     start_index = pc_to_instruction_index[start]
     push_index_to_use_indices = {}
@@ -230,7 +261,7 @@ def global_data_flow_analysis(disassembly, pc_to_instruction_index, start, func_
     ctx_stack = [(-1, start_index)] # the first element is index of callsite, the second element is the index of entry
     visited_times = {}
     missing_flag, invalid_flag, _invalid_call = _global_data_flow_analysis(disassembly, start_index, pc_to_instruction_index, op_stack, set(),
-                                                                           visited_times, push_index_to_use_indices, 0, fb, ctx_stack,
+                                                                           visited_times, push_index_to_use_indices, 0, fb, call_graph, ctx_stack,
                                                                            func_starts, possible_calls, invalid_call, current_threshold,
                                                                            threshold, identified_funcs, False)
     return missing_flag, invalid_flag, _invalid_call

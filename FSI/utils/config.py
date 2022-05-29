@@ -36,7 +36,6 @@ temp_dir = ""
 dtype = "FSI-biLSTM-CRF"
 
 modle_output = ""
-fsi_result_csv_path = ""
 
 fsi_result_path = ""
 

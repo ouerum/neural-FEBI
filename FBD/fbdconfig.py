@@ -8,3 +8,10 @@ debug = False
 
 visited_max_times = 100
 init_stack_heigth = 32
+
+is_cfg = False
+
+contracts_dir = ''
+fsi_result_path = ''
+result_path = ''
+

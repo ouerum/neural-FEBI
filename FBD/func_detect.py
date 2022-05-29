@@ -46,14 +46,15 @@ def decode(crf_score, length, tag_map, threshold=0.5, not_start=None):
     return decoded
 
 
-
-
-def construct_start_pcs(instruction_sequence, basic_blocks, body_tags, tag_id_to_pc, tag_map, fsi_results,
+def construct_start_pcs(instruction_sequence, basic_blocks, body_tags, fallback_tag, tag_id_to_pc, tag_map, fsi_results,
                         threshold=0.5, not_starts=None):
     init_starts = set()
 
     for body_tag in body_tags:
         init_starts.add(tag_id_to_pc[body_tag])
+
+    if len(fallback_tag) != 0:
+        init_starts.add(tag_id_to_pc[list(fallback_tag)[0]])
 
     decoded = decode(fsi_results[0], fsi_results[1], tag_map, threshold, not_starts)
     decoded = decoded.to("cpu").numpy().tolist()
@@ -75,27 +76,33 @@ def detect_func(instruction_sequence, basic_blocks, pc_to_instruction_index, tag
     invalid_calls = set()
     body_tags = external_function_entry_tag_to_body_tag.values()
     start = time.time()
-    func_starts = construct_start_pcs(instruction_sequence, basic_blocks, body_tags, tag_id_to_pc,
-                                                      tag_map, fsi_results, threshold1)
+    func_starts = construct_start_pcs(instruction_sequence, basic_blocks, body_tags, fallback_tag, tag_id_to_pc, tag_map, fsi_results, threshold1)
     removed_time = time.time() - start
 
     possible_calls = {}
     wait_for_exporation = func_starts
     not_starts = set()
     fbs = {}
+    call_graph = {} # entry -> call_site_index -> (tgt_func, tag_context)
 
     while len(wait_for_exporation):
         delay_flag = False
         _wait_for_exporation = set()
         for entry_pc in wait_for_exporation:
             fb = set()
-            missing_flag, invalid_flag, _invalid_calls = global_data_flow_analysis(instruction_sequence, pc_to_instruction_index, entry_pc, func_starts, possible_calls, invalid_calls, fb, threshold1, threshold2, fbs.keys())
+            _call_graph = {}
+            missing_flag, invalid_flag, _invalid_calls = global_data_flow_analysis(instruction_sequence,
+                                                                                   pc_to_instruction_index,
+                                                                                   entry_pc, func_starts,
+                                                                                   possible_calls, invalid_calls, fb,
+                                                                                   _call_graph, threshold1,
+                                                                                   threshold2, fbs.keys())
             if (not missing_flag) and (not invalid_flag):
                 fbs[entry_pc] = fb
+                call_graph[entry_pc] = _call_graph
             else:
                 if len(_invalid_calls) > 0 and debug:
                     print("find the invalid calls at {}".format(_invalid_calls))
-
                 _wait_for_exporation.add(entry_pc)
                 delay_flag = delay_flag or missing_flag
                 invalid_calls.update(_invalid_calls)
@@ -105,20 +112,29 @@ def detect_func(instruction_sequence, basic_blocks, pc_to_instruction_index, tag
                         possible_calls[target].remove(call_index)
                         pass
 
+        # for target, call_site in possible_calls.items():
+        #     if len(call_site) == 0 and target in fbs:
+        #         not_starts.add(target)
+        #         fbs.pop(target)
+        #         if debug:
+        #             print("function start with " + str(target) + " have been removed")
 
         _fbs = {}
+        new_call_graph = {}
         for start in fbs.keys():
             start_tag = instruction_sequence[pc_to_instruction_index[start]].tag_id
             if start_tag in body_tags or start_tag in fallback_tag:
                 _fbs[start] = fbs[start]
+                new_call_graph[start] = call_graph[start]
             elif start not in possible_calls or len(possible_calls[start]) == 0:
                 not_starts.add(start)
                 if debug:
                     print("function start with " + str(start) + " have been removed")
             else:
                 _fbs[start] = fbs[start]
+                new_call_graph[start] = call_graph[start]
         fbs = _fbs
-
+        call_graph = new_call_graph
 
         func_starts -= not_starts
         _wait_for_exporation -= not_starts
@@ -127,9 +143,9 @@ def detect_func(instruction_sequence, basic_blocks, pc_to_instruction_index, tag
             if debug:
                 print("the threshold1 have been reduce {}, current threshold is {}".format(delay_flag, threshold1))
             threshold1 -= delay
-            _func_starts = construct_start_pcs(instruction_sequence, basic_blocks, body_tags,
-                                                               tag_id_to_pc, tag_map, fsi_results, threshold=threshold1,
-                                                               not_starts=not_starts)
+            _func_starts = construct_start_pcs(instruction_sequence, basic_blocks, body_tags, fallback_tag,
+                                               tag_id_to_pc, tag_map, fsi_results, threshold=threshold1,
+                                               not_starts=not_starts)
             new_func_starts = set(_func_starts) - set(func_starts)
             if len(new_func_starts) > 0 and debug:
                 print("explore more functions {}".format(new_func_starts))
@@ -138,8 +154,44 @@ def detect_func(instruction_sequence, basic_blocks, pc_to_instruction_index, tag
 
         wait_for_exporation = _wait_for_exporation
 
-    return fbs, removed_time
+    return fbs, call_graph, removed_time
 
 
+# if __name__ == "__main__":
+#     import pickle, os
+#
+#     dir = "/home/dapp/ssd/personal/neural-FIBD/results/fsi"
+#
+#     # SOLC_VERSION = ["0.5.17", "d19bba13"]
+#     SOLC_VERSION = ["0.4.25", "59dbf8f1"]
+#     opt = False
+#     optimzied = "-optimized" if opt else "-unoptimized"
+#
+#     contract_dir = os.path.join(dir, SOLC_VERSION[0] + optimzied)
+#
+#     files = os.listdir(contract_dir)[:1]
+#
+#     # files = ['1202']
+#
+#     error_addrs = []
+#
+#     for file in files:
+#         print(file)
+#         with open(os.path.join(contract_dir, file), 'rb') as f:
+#             addrs, crf_scores, bmap_lengths_sorted, decoded_time, tag_map = pickle.load(f)
+#             crf_scores = crf_scores.to("cpu")
+#             bmap_lengths_sorted = bmap_lengths_sorted.to("cpu")
+#             for i, addr in enumerate(addrs):
+#                 gloden = decode(crf_scores[i], bmap_lengths_sorted[i], tag_map)[:bmap_lengths_sorted[i] - 1]
+#                 fb, time = detect_func()
+#                 # gloden = _decodeds[i][:bmap_lengths_sorted[i]-1]
+#                 flag = gloden.equal(_decoded)
+#                 flag2 = gloden.equal(_decodeds[i][:bmap_lengths_sorted[i] - 1])
+#                 if not (flag and flag2):
+#                     error_addrs.append(addr)
+#                 print(addr+" "+str(flag and flag2))
+#
+#     print(len(error_addrs))
+#     print(error_addrs)
 
 
