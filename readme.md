@@ -43,5 +43,9 @@ The dataset contains two parts :
 * dataset/etherscan.zip: the solidity contracts crawled from Etherscan. 
 * dataset/ground-truth.zip: the ground-truth of function boundaries for given instrumented solc and contracts. 
 
+## 5. Publications
+He, J., Li, S., Wang, X., Cheung, S.C., Zhao, G. and Yang, J., 2023. Neural-FEBI: Accurate function identification in Ethereum Virtual Machine bytecode. Journal of Systems and Software.
+
+https://arxiv.org/abs/2301.12695
 
 
